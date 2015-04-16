@@ -1,7 +1,7 @@
 // =================================================================================================
 //
 //	Starling Framework
-//	Copyright 2011 Gamua OG. All Rights Reserved.
+//	Copyright 2011-2014 Gamua. All Rights Reserved.
 //
 //	This program is free software. You can redistribute and/or modify it
 //	in accordance with the terms of the accompanying license agreement.
@@ -10,6 +10,7 @@
 
 package starling.animation
 {
+    import starling.core.starling_internal;
     import starling.events.Event;
     import starling.events.EventDispatcher;
 
@@ -53,7 +54,10 @@ package starling.animation
         public function advanceTime(time:Number):void
         {
             var previousTime:Number = mCurrentTime;
-            mCurrentTime = Math.min(mTotalTime, mCurrentTime + time);
+            mCurrentTime += time;
+
+            if (mCurrentTime > mTotalTime)
+                mCurrentTime = mTotalTime;
             
             if (previousTime < mTotalTime && mCurrentTime >= mTotalTime)
             {                
@@ -78,6 +82,14 @@ package starling.animation
                 }
             }
         }
+
+        /** Advances the delayed call so that it is executed right away. If 'repeatCount' is
+          * anything else than '1', this method will complete only the current iteration. */
+        public function complete():void
+        {
+            var restTime:Number = mTotalTime - mCurrentTime;
+            if (restTime > 0) advanceTime(restTime);
+        }
         
         /** Indicates if enough time has passed, and the call has already been executed. */
         public function get isComplete():Boolean 
@@ -95,5 +107,27 @@ package starling.animation
          *  Set to '0' to repeat indefinitely. @default 1 */
         public function get repeatCount():int { return mRepeatCount; }
         public function set repeatCount(value:int):void { mRepeatCount = value; }
+        
+        // delayed call pooling
+        
+        private static var sPool:Vector.<DelayedCall> = new <DelayedCall>[];
+        
+        /** @private */
+        starling_internal static function fromPool(call:Function, delay:Number, 
+                                                   args:Array=null):DelayedCall
+        {
+            if (sPool.length) return sPool.pop().reset(call, delay, args);
+            else return new DelayedCall(call, delay, args);
+        }
+        
+        /** @private */
+        starling_internal static function toPool(delayedCall:DelayedCall):void
+        {
+            // reset any object-references, to make sure we don't prevent any garbage collection
+            delayedCall.mCall = null;
+            delayedCall.mArgs = null;
+            delayedCall.removeEventListeners();
+            sPool.push(delayedCall);
+        }
     }
 }
