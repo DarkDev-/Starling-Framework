@@ -64,7 +64,7 @@ package starling.display
      *  @see Sprite
      *  @see DisplayObject
      */
-    public class DisplayObjectContainer extends DisplayObject
+    public class DisplayObjectContainer extends DisplayObject implements Updateable
     {
         // members
 
@@ -524,5 +524,16 @@ package starling.display
                     getChildEventListeners(children[i], eventType, listeners);
             }
         }
+		
+		public function Update( elapsedTime:Number ):void 
+		{
+			//Anropa update på de som har de
+			for ( var i:int = 0; i < this.numChildren; i++ )
+			{
+				var updateObj:Object = mChildren[i];
+				if ( updateObj is Updateable )
+					Updateable(updateObj).Update( elapsedTime );
+			}
+		}
     }
 }

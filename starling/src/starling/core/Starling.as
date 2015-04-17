@@ -39,6 +39,7 @@ package starling.core
     import flash.utils.Dictionary;
     import flash.utils.getTimer;
     import flash.utils.setTimeout;
+	import starling.display.Camera;
 
     import starling.animation.Juggler;
     import starling.display.DisplayObject;
@@ -180,6 +181,8 @@ package starling.core
      */ 
     public class Starling extends EventDispatcher
     {
+		public static var instance: Starling;
+		
         /** The version of the Starling framework. */
         public static const VERSION:String = "1.6.1";
         
@@ -187,6 +190,8 @@ package starling.core
         private static const PROGRAM_DATA_NAME:String = "Starling.programs"; 
         
         // members
+		
+		public var maxTimeStep: Number = 1.0;
         
         private var mStage3D:Stage3D;
         private var mStage:Stage; // starling.display.stage!
@@ -211,6 +216,7 @@ package starling.core
         private var mViewPort:Rectangle;
         private var mPreviousViewPort:Rectangle;
         private var mClippedViewPort:Rectangle;
+		private var mCamera:Camera;
 
         private var mNativeStage:flash.display.Stage;
         private var mNativeOverlay:flash.display.Sprite;
@@ -251,6 +257,8 @@ package starling.core
                                  viewPort:Rectangle=null, stage3D:Stage3D=null,
                                  renderMode:String="auto", profile:Object="baselineConstrained")
         {
+			Starling.instance = this;
+			
             if (stage == null) throw new ArgumentError("Stage must not be null");
             if (viewPort == null) viewPort = new Rectangle(0, 0, stage.stageWidth, stage.stageHeight);
             if (stage3D == null) stage3D = stage.stage3Ds[0];
@@ -276,6 +284,7 @@ package starling.core
             mSupportHighResolutions = false;
             mLastFrameTimestamp = getTimer() / 1000.0;
             mSupport  = new RenderSupport();
+			mCamera = new Camera();			
             
             // for context data, we actually reference by stage3D, since it survives a context loss
             sContextData[stage3D] = new Dictionary();
@@ -454,6 +463,7 @@ package starling.core
                 mRoot = new mRootClass() as DisplayObject;
                 if (mRoot == null) throw new Error("Invalid root class: " + mRootClass);
                 mStage.addChildAt(mRoot, 0);
+				mCamera.Init( mRoot, this.stage );
 
                 dispatchEventWith(starling.events.Event.ROOT_CREATED, false, mRoot);
             }
@@ -468,7 +478,7 @@ package starling.core
             mLastFrameTimestamp = now;
             
             // to avoid overloading time-based animations, the maximum delta is truncated.
-            if (passedTime > 1.0) passedTime = 1.0;
+            if (passedTime > maxTimeStep) passedTime = maxTimeStep;
 
             advanceTime(passedTime);
             render();
@@ -1095,6 +1105,11 @@ package starling.core
         {
             return mContext && mContext.driverInfo != "Disposed";
         }
+		
+		public function get camera():Camera
+		{
+			return mCamera;
+		}
 
         // static properties
         

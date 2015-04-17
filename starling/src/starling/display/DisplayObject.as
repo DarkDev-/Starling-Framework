@@ -134,6 +134,8 @@ package starling.display
         private var mY:Number;
         private var mPivotX:Number;
         private var mPivotY:Number;
+		private var mAnchorX:Number;
+		private var mAnchorY:Number;
         private var mScaleX:Number;
         private var mScaleY:Number;
         private var mSkewX:Number;
@@ -148,7 +150,7 @@ package starling.display
         private var mParent:DisplayObjectContainer;  
         private var mTransformationMatrix:Matrix;
         private var mTransformationMatrix3D:Matrix3D;
-        private var mOrientationChanged:Boolean;
+        protected var mOrientationChanged:Boolean;
         private var mFilter:FragmentFilter;
         private var mIs3D:Boolean;
         private var mMask:DisplayObject;
@@ -173,7 +175,7 @@ package starling.display
                 throw new AbstractClassError();
             }
             
-            mX = mY = mPivotX = mPivotY = mRotation = mSkewX = mSkewY = 0.0;
+            mX = mY = mPivotX = mPivotY = mRotation = mSkewX = mSkewY = mAnchorX = mAnchorY = 0.0;
             mScaleX = mScaleY = mAlpha = 1.0;            
             mVisible = mTouchable = true;
             mBlendMode = BlendMode.AUTO;
@@ -373,7 +375,7 @@ package starling.display
         }
         
         /** Moves the pivot point to a certain position within the local coordinate system
-         *  of the object. If you pass no arguments, it will be centered. */ 
+         *  of the object. Goes from [0.0->width] and is added with anchor. If you pass no arguments, it will be centered. */ 
         public function alignPivot(hAlign:String="center", vAlign:String="center"):void
         {
             var bounds:Rectangle = getBounds(this);
@@ -389,6 +391,23 @@ package starling.display
             else if (vAlign == VAlign.BOTTOM) mPivotY = bounds.y + bounds.height;
             else throw new ArgumentError("Invalid vertical alignment: " + vAlign);
         }
+		
+		/** Moves the anchor point to a certain position within the local coordinate system
+         *  of the object. Goes from [0.0->1.0] and is added with pivot. If you pass no arguments, it will be centered. */ 
+		public function alignAnchor(hAlign:String = "center", vAlign:String = "center"):void
+		{
+            mOrientationChanged = true;
+            
+            if (hAlign == HAlign.LEFT)        mAnchorX = 0;
+            else if (hAlign == HAlign.CENTER) mAnchorX = 0.5;
+            else if (hAlign == HAlign.RIGHT)  mAnchorX = 1.0; 
+            else throw new ArgumentError("Invalid horizontal alignment: " + hAlign);
+            
+            if (vAlign == VAlign.TOP)         mAnchorY = 0;
+            else if (vAlign == VAlign.CENTER) mAnchorY = 0.5;
+            else if (vAlign == VAlign.BOTTOM) mAnchorY = 1.0;
+            else throw new ArgumentError("Invalid vertical alignment: " + vAlign);
+		}
         
         // 3D transformation
 
@@ -640,7 +659,10 @@ package starling.display
             if (mOrientationChanged)
             {
                 mOrientationChanged = false;
-                
+				var bounds: Rectangle = getBounds(this, sHelperRect);
+				var pivotX: Number = mPivotX + (mAnchorX != 0 ? mAnchorX * bounds.width : 0);
+                var pivotY: Number = mPivotY + (mAnchorY != 0 ? mAnchorY * bounds.height : 0);
+				
                 if (mSkewX == 0.0 && mSkewY == 0.0)
                 {
                     // optimization: no skewing / rotation simplifies the matrix math
@@ -648,7 +670,7 @@ package starling.display
                     if (mRotation == 0.0)
                     {
                         mTransformationMatrix.setTo(mScaleX, 0.0, 0.0, mScaleY, 
-                            mX - mPivotX * mScaleX, mY - mPivotY * mScaleY);
+                            mX - pivotX * mScaleX, mY - pivotY * mScaleY);
                     }
                     else
                     {
@@ -658,8 +680,8 @@ package starling.display
                         var b:Number   = mScaleX *  sin;
                         var c:Number   = mScaleY * -sin;
                         var d:Number   = mScaleY *  cos;
-                        var tx:Number  = mX - mPivotX * a - mPivotY * c;
-                        var ty:Number  = mY - mPivotX * b - mPivotY * d;
+                        var tx:Number  = mX - pivotX * a - pivotY * c;
+                        var ty:Number  = mY - pivotX * b - pivotY * d;
                         
                         mTransformationMatrix.setTo(a, b, c, d, tx, ty);
                     }
@@ -672,13 +694,13 @@ package starling.display
                     mTransformationMatrix.rotate(mRotation);
                     mTransformationMatrix.translate(mX, mY);
                     
-                    if (mPivotX != 0.0 || mPivotY != 0.0)
+                    if (pivotX != 0.0 || pivotY != 0.0)
                     {
                         // prepend pivot transformation
-                        mTransformationMatrix.tx = mX - mTransformationMatrix.a * mPivotX
-                                                      - mTransformationMatrix.c * mPivotY;
-                        mTransformationMatrix.ty = mY - mTransformationMatrix.b * mPivotX 
-                                                      - mTransformationMatrix.d * mPivotY;
+                        mTransformationMatrix.tx = mX - mTransformationMatrix.a * pivotX
+                                                      - mTransformationMatrix.c * pivotY;
+                        mTransformationMatrix.ty = mY - mTransformationMatrix.b * pivotX 
+                                                      - mTransformationMatrix.d * pivotY;
                     }
                 }
             }
@@ -692,7 +714,7 @@ package starling.display
 
             mOrientationChanged = false;
             mTransformationMatrix.copyFrom(matrix);
-            mPivotX = mPivotY = 0;
+            mPivotX = mPivotY = mAnchorX = mAnchorY = 0;
             
             mX = matrix.tx;
             mY = matrix.ty;
@@ -811,7 +833,7 @@ package starling.display
             }
         }
         
-        /** The x coordinate of the object's origin in its own coordinate space (default: 0). */
+        /** The x coordinate of the object's origin in its own coordinate space [0->width] (default: 0). */
         public function get pivotX():Number { return mPivotX; }
         public function set pivotX(value:Number):void 
         {
@@ -822,13 +844,35 @@ package starling.display
             }
         }
         
-        /** The y coordinate of the object's origin in its own coordinate space (default: 0). */
+        /** The y coordinate of the object's origin in its own coordinate space [0->height] (default: 0). */
         public function get pivotY():Number { return mPivotY; }
         public function set pivotY(value:Number):void 
         { 
             if (mPivotY != value)
             {
                 mPivotY = value;
+                mOrientationChanged = true;
+            }
+        }
+		
+		/** The x coordinate of the object's origin in its own coordinate space [0->1.0] (default: 0). */
+        public function get anchorX():Number { return mAnchorX; }
+        public function set anchorX(value:Number):void 
+        {
+            if (mAnchorX != value)
+            {
+                mAnchorX = value;
+                mOrientationChanged = true;
+            }
+        }
+        
+        /** The y coordinate of the object's origin in its own coordinate space [0->1.0] (default: 0). */
+        public function get anchorY():Number { return mAnchorY; }
+        public function set anchorY(value:Number):void 
+        { 
+            if (mAnchorY != value)
+            {
+                mAnchorY = value;
                 mOrientationChanged = true;
             }
         }

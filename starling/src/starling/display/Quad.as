@@ -89,9 +89,11 @@ package starling.display
             {
                 var scaleX:Number = this.scaleX;
                 var scaleY:Number = this.scaleY;
-                mVertexData.getPosition(3, sHelperPoint);
-                resultRect.setTo(x - pivotX * scaleX,      y - pivotY * scaleY,
-                                 sHelperPoint.x * scaleX, sHelperPoint.y * scaleY);
+				mVertexData.getPosition(3, sHelperPoint);
+				var width: Number = scaleX * sHelperPoint.x;
+				var height: Number = scaleY * sHelperPoint.y;                
+                resultRect.setTo(x - pivotX * scaleX - anchorX * width, y - pivotY * scaleY - anchorY * height,
+                                 width, height);
                 if (scaleX < 0) { resultRect.width  *= -1; resultRect.x -= resultRect.width;  }
                 if (scaleY < 0) { resultRect.height *= -1; resultRect.y -= resultRect.height; }
             }

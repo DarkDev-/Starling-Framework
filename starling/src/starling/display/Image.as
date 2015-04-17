@@ -45,31 +45,37 @@ package starling.display
         private var mVertexDataCacheInvalid:Boolean;
         
         /** Creates a quad with a texture mapped onto it. */
-        public function Image(texture:Texture)
+        public function Image(texture:Texture = null)
         {
+			var width:Number;
+			var height:Number;
+			var pma:Boolean;
+			var frame:Rectangle;
             if (texture)
             {
-                var frame:Rectangle = texture.frame;
-                var width:Number  = frame ? frame.width  : texture.width;
-                var height:Number = frame ? frame.height : texture.height;
-                var pma:Boolean = texture.premultipliedAlpha;
-                
-                super(width, height, 0xffffff, pma);
-                
-                mVertexData.setTexCoords(0, 0.0, 0.0);
-                mVertexData.setTexCoords(1, 1.0, 0.0);
-                mVertexData.setTexCoords(2, 0.0, 1.0);
-                mVertexData.setTexCoords(3, 1.0, 1.0);
-                
-                mTexture = texture;
-                mSmoothing = TextureSmoothing.BILINEAR;
-                mVertexDataCache = new VertexData(4, pma);
-                mVertexDataCacheInvalid = true;
-            }
-            else
-            {
-                throw new ArgumentError("Texture cannot be null");
-            }
+				frame = texture.frame;
+				width = frame ? frame.width  : texture.width;
+				height = frame ? frame.height : texture.height;
+				pma = texture.premultipliedAlpha;
+			}else
+			{
+				width = 1;
+				height = 1;
+				pma = true;
+			}
+            
+			super(width, height, 0xffffff, pma);
+			
+			mVertexData.setTexCoords(0, 0.0, 0.0);
+			mVertexData.setTexCoords(1, 1.0, 0.0);
+			mVertexData.setTexCoords(2, 0.0, 1.0);
+			mVertexData.setTexCoords(3, 1.0, 1.0);
+			
+			
+			mSmoothing = TextureSmoothing.BILINEAR;
+			mVertexDataCache = new VertexData(4, pma);
+			mVertexDataCacheInvalid = true;
+			mTexture = texture;
         }
         
         /** Creates an Image with a texture that is created from a bitmap object. */
@@ -98,6 +104,10 @@ package starling.display
             mVertexData.setPosition(2, 0.0, height);
             mVertexData.setPosition(3, width, height); 
             
+			if ( anchorX != 0 || anchorY != 0 )
+			{
+				mOrientationChanged = true;
+			}
             onVertexDataChanged();
         }
         
